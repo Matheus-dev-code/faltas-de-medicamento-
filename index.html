@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Medicamentos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      font-size: 16px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: white;
+      padding: 8px;
+      margin: 4px 0;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .falta {
+      background: #ffd6d6;
+      color: red;
+      font-weight: bold;
+    }
+    .ok {
+      background: #d6ffd6;
+      color: green;
+      font-weight: bold;
+    }
+    .aviso-validade {
+      background: #fff3cd;
+      color: #856404;
+      font-weight: bold;
+    }
+    .categoria {
+      font-weight: bold;
+      margin-top: 10px;
+      background: #e0e0e0;
+      padding: 5px 10px;
+      border-radius: 6px;
+    }
+    .btn-remover {
+      background: red;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-remover:hover {
+      background: darkred;
+    }
+    .btn-limpar, .btn-baixar, .btn-importar {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-baixar {
+      background: #0077cc;
+    }
+    .btn-importar {
+      background: #00aa55;
+    }
+    .btn-baixar:hover {
+      background: #005fa3;
+    }
+    .btn-importar:hover {
+      background: #008844;
+    }
+    .btn-limpar:hover {
+      background: #000;
+    }
+    .estoque-input {
+      width: 60px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>💊 Controle de Medicamentos</h1>
+
+  <h2>Adicionar Medicamento</h2>
+  <input type="text" id="nome" placeholder="Nome do medicamento">
+  <input type="number" id="estoque" placeholder="Quantidade em estoque">
+  <input type="number" id="minimo" placeholder="Quantidade mínima">
+  <input type="date" id="validade" placeholder="Data de validade">
+  <input type="text" id="categoria" placeholder="Categoria (ex: Antibiótico, Analgésico)">
+  <button onclick="adicionarMedicamento()">Adicionar</button>
+
+  <h2>Lista de Medicamentos</h2>
+  <div id="lista-medicamentos"></div>
+
+  <button class="btn-limpar" onclick="limparTudo()">🗑️ Limpar Lista</button>
+  <button class="btn-baixar" onclick="baixarLista()">⬇️ Baixar Lista</button>
+  <button class="btn-importar" onclick="document.getElementById('fileInput').click()">📂 Importar Lista</button>
+  <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="importarLista(event)">
+
+  <h2>📉 Alertas</h2>
+  <ul id="lista-alertas"></ul>
+
+  <script>
+    let medicamentos = [];
+
+    // Carregar medicamentos salvos ao abrir a página
+    window.onload = function () {
+      const dadosSalvos = localStorage.getItem("medicamentos");
+      if (dadosSalvos) {
+        medicamentos = JSON.parse(dadosSalvos);
+        atualizarListas();
+      }
+    };
+
+    function salvarMedicamentos() {
+      localStorage.setItem("medicamentos", JSON.stringify(medicamentos));
+    }
+
+    function adicionarMedicamento() {
+      const nome = document.getElementById("nome").value;
+      const estoque = parseInt(document.getElementById("estoque").value);
+      const minimo = parseInt(document.getElementById("minimo").value);
+      const validade = document.getElementById("validade").value;
+      const categoria = document.getElementById("categoria").value || "Outros";
+
+      if (!nome || isNaN(estoque) || isNaN(minimo) || !validade) {
+        alert("Preencha todos os campos!");
+        return;
+      }
+
+      medicamentos.push({ nome, estoque, minimo, validade, categoria });
+
+      salvarMedicamentos();
+      limparCampos();
+      atualizarListas();
+    }
+
+    function editarEstoque(index, novoValor) {
+      if (novoValor === "" || isNaN(novoValor)) return;
+      medicamentos[index].estoque = parseInt(novoValor);
+      salvarMedicamentos();
+      atualizarListas();
+    }
+
+    function removerMedicamento(index) {
+      if (confirm("Tem certeza que deseja remover este medicamento?")) {
+        medicamentos.splice(index, 1);
+        salvarMedicamentos();
+        atualizarListas();
+      }
+    }
+
+    function limparTudo() {
+      if (confirm("Tem certeza que deseja apagar TODOS os medicamentos?")) {
+        medicamentos = [];
+        salvarMedicamentos();
+        atualizarListas();
+      }
+    }
+
+    function limparCampos() {
+      document.getElementById("nome").value = "";
+      document.getElementById("estoque").value = "";
+      document.getElementById("minimo").value = "";
+      document.getElementById("validade").value = "";
+      document.getElementById("categoria").value = "";
+    }
+
+    function atualizarListas() {
+      const container = document.getElementById("lista-medicamentos");
+      const listaAlertas = document.getElementById("lista-alertas");
+
+      container.innerHTML = "";
+      listaAlertas.innerHTML = "";
+
+      const categorias = {};
+      medicamentos.forEach((m, index) => {
+        if (!categorias[m.categoria]) categorias[m.categoria] = [];
+        categorias[m.categoria].push({ ...m, index });
+      });
+
+      for (const categoria in categorias) {
+        const titulo = document.createElement("div");
+        titulo.classList.add("categoria");
+        titulo.textContent = categoria;
+        container.appendChild(titulo);
+
+        categorias[categoria].forEach(item => {
+          const li = document.createElement("li");
+          const hoje = new Date();
+          const validadeDate = new Date(item.validade);
+          const diffDias = Math.ceil((validadeDate - hoje) / (1000 * 60 * 60 * 24));
+
+          let classes = [];
+          if (item.estoque < item.minimo) {
+            classes.push("falta");
+            const alerta = document.createElement("li");
+            alerta.textContent = `⚠️ ${item.nome} - Estoque baixo! (${item.estoque}/${item.minimo})`;
+            listaAlertas.appendChild(alerta);
+          } else {
+            classes.push("ok");
+          }
+
+          if (diffDias <= 30) {
+            classes.push("aviso-validade");
+            const alerta = document.createElement("li");
+            alerta.textContent = `⏳ ${item.nome} vence em ${diffDias} dia(s)!`;
+            listaAlertas.appendChild(alerta);
+          }
+
+          li.className = classes.join(" ");
+          li.innerHTML = `
+            <span>${item.nome} (Mín: ${item.minimo}) - Validade: ${item.validade}</span>
+            <input type="number" class="estoque-input" value="${item.estoque}" onchange="editarEstoque(${item.index}, this.value)">
+            <button class="btn-remover" onclick="removerMedicamento(${item.index})">X</button>
+          `;
+          container.appendChild(li);
+        });
+      }
+    }
+
+    function baixarLista() {
+      if (medicamentos.length === 0) {
+        alert("Não há medicamentos para baixar.");
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(medicamentos, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "lista-medicamentos.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importarLista(event) {
+      const arquivo = event.target.files[0];
+      if (!arquivo) return;
+
+      const leitor = new FileReader();
+      leitor.onload = function(e) {
+        try {
+          const dados = JSON.parse(e.target.result);
+          if (!Array.isArray(dados)) throw new Error("Formato inválido");
+          medicamentos = dados;
+          salvarMedicamentos();
+          atualizarListas();
+          alert("Lista importada com sucesso!");
+        } catch (error) {
+          alert("Erro ao importar lista. Verifique o arquivo.");
+        }
+      };
+      leitor.readAsText(arquivo);
+    }
+  </script>
+</body>
+</html>
