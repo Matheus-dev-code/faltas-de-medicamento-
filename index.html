@@ -222,7 +222,8 @@
             classes.push("ok");
           }
 
-          if (diffDias <= 30) {
+          // ALERTA agora para 90 dias (3 meses)
+          if (diffDias <= 90) {
             classes.push("aviso-validade");
             const alerta = document.createElement("li");
             alerta.textContent = `⏳ ${item.nome} vence em ${diffDias} dia(s)!`;
